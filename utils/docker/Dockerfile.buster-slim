@@ -1,0 +1,50 @@
+FROM debian:buster-slim
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ARG DEBIAN_FRONTEND=noninteractive
+
+# prepare install
+
+RUN apt-get update && apt-get install -y git curl ssh ca-certificates
+
+# === INSTALL Node.js ===
+
+# Install node14
+RUN curl -sL https://deb.nodesource.com/setup_14.x | bash - \
+ && apt-get install -y nodejs
+
+# === INSTALL Google Chrome ===
+
+# add an apt repository of chrome
+# google-chrome.list will be overwritten by installing google-chrome-stabe
+RUN curl -fsSL https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
+RUN echo "deb http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
+
+# install several packages for CI
+RUN apt-get update -y \
+ && apt-get install -y --no-install-recommends google-chrome-stable xvfb fonts-vlgothic
+
+# === INSTALL Edge ===
+
+RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
+RUN echo "deb [arch=amd64] https://packages.microsoft.com/repos/edge stable main" > /etc/apt/sources.list.d/microsoft-edge-beta.list
+
+# install several packages for CI
+RUN apt-get update -y \
+ && apt-get install -y --no-install-recommends microsoft-edge-beta
+
+# === INSTALL Chromium, Firefox, Webkit ===
+
+RUN mkdir /ms-playwright
+
+RUN cd && npm i -D playwright && rm -Rf /root/node_modules
+
+# Create the pwuser (we internally create a symlink for the pwuser and the root user)
+RUN adduser pwuser
+
+RUN chown pwuser.pwuser /home/pwuser
+
+USER pwuser
+
+RUN cd ~/ && mkdir app && cd ~/app
+
+WORKDIR /home/pwuser/app
